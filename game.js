@@ -3,10 +3,12 @@ const ctx = canvas.getContext('2d');
 
 // 게임 변수
 const ballRadius = 8;
-let x = canvas.width / 2;
-let y = canvas.height - 30;
-let dx = 2;
-let dy = -2;
+
+function createBall(x, y, dx, dy) {
+    return { x, y, dx, dy };
+}
+
+let balls = [createBall(canvas.width / 2, canvas.height - 30, 2, -2)];
 
 const paddleHeight = 10;
 const paddleWidth = 75;
@@ -71,15 +73,19 @@ function mouseMoveHandler(e) {
     }
 }
 
-function collisionDetection() {
+function collisionDetection(ball) {
     for(let c = 0; c < brickColumnCount; c++) {
         for(let r = 0; r < brickRowCount; r++) {
             const b = bricks[c][r];
             if(b.status === 1) {
-                if(x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
-                    dy = -dy;
+                if(ball.x > b.x && ball.x < b.x + brickWidth && ball.y > b.y && ball.y < b.y + brickHeight) {
+                    ball.dy = -ball.dy;
                     b.status = 0;
                     score++;
+                    // 공 추가: 랜덤 방향
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
+                    balls.push(createBall(ball.x, ball.y, speed * Math.cos(angle), speed * Math.sin(angle)));
                     if(score === brickRowCount * brickColumnCount) {
                         alert('축하합니다! 모든 벽돌을 깼어요!');
                         document.location.reload();
@@ -90,9 +96,9 @@ function collisionDetection() {
     }
 }
 
-function drawBall() {
+function drawBall(ball) {
     ctx.beginPath();
-    ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+    ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
     ctx.fillStyle = '#ffeb3b';
     ctx.fill();
     ctx.closePath();
@@ -132,6 +138,8 @@ function drawScore() {
         ctx.fillStyle = '#f44336';
         ctx.fillText('AUTO', 100, 20);
     }
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillText('공: ' + balls.length, 180, 20);
 }
 
 function drawLives() {
@@ -168,67 +176,70 @@ function draw() {
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBricks();
-    drawBall();
     drawPaddle();
     drawScore();
     drawLives();
-    collisionDetection();
+    // 각 공 처리
+    for(let i = balls.length - 1; i >= 0; i--) {
+        let ball = balls[i];
+        drawBall(ball);
+        collisionDetection(ball);
 
-    // 벽 충돌
-    if(x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
-        dx = -dx;
-    }
-    if(y + dy < ballRadius) {
-        dy = -dy;
-    } else if(y + dy > canvas.height - ballRadius) {
-        if(x > paddleX && x < paddleX + paddleWidth) {
-            // 패들 중앙 기준 위치
-            let hitPoint = (x - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
-            let speed = Math.sqrt(dx*dx + dy*dy);
-            let angle = hitPoint * Math.PI / 3; // 최대 60도
-            dx = speed * Math.sin(angle);
-            dy = -Math.abs(speed * Math.cos(angle));
-            // 패들이 움직이고 있으면 추가 가속도
-            if(rightPressed) dx += 1;
-            if(leftPressed) dx -= 1;
-        } else {
-            lives--;
-            if(!lives) {
-                alert('게임 오버!');
-                document.location.reload();
+        // 벽 충돌
+        if(ball.x + ball.dx > canvas.width - ballRadius || ball.x + ball.dx < ballRadius) {
+            ball.dx = -ball.dx;
+        }
+        if(ball.y + ball.dy < ballRadius) {
+            ball.dy = -ball.dy;
+        } else if(ball.y + ball.dy > canvas.height - ballRadius) {
+            if(ball.x > paddleX && ball.x < paddleX + paddleWidth) {
+                // 패들 중앙 기준 위치
+                let hitPoint = (ball.x - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
+                let speed = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
+                let angle = hitPoint * Math.PI / 3; // 최대 60도
+                ball.dx = speed * Math.sin(angle);
+                ball.dy = -Math.abs(speed * Math.cos(angle));
+                if(rightPressed) ball.dx += 1;
+                if(leftPressed) ball.dx -= 1;
             } else {
-                x = canvas.width / 2;
-                y = canvas.height - 30;
-                dx = 2;
-                dy = -2;
-                paddleX = (canvas.width - paddleWidth) / 2;
+                // 공 삭제
+                balls.splice(i, 1);
+                if(balls.length === 0) {
+                    lives--;
+                    if(!lives) {
+                        alert('게임 오버!');
+                        document.location.reload();
+                    } else {
+                        balls = [createBall(canvas.width / 2, canvas.height - 30, 2, -2)];
+                        paddleX = (canvas.width - paddleWidth) / 2;
+                    }
+                }
+                continue;
             }
         }
-    }
-
-    // 패들 이동
-    if(autoMode) {
-        // 패들이 공을 따라가도록 자동 이동
-        let target = x - paddleWidth/2;
-        let diff = target - paddleX;
-        if(Math.abs(diff) > 4) {
-            paddleX += diff > 0 ? 7 : -7;
-        } else {
-            paddleX = target;
+        // 패들 이동 (auto 모드)
+        if(autoMode) {
+            let target = ball.x - paddleWidth/2;
+            let diff = target - paddleX;
+            if(Math.abs(diff) > 4) {
+                paddleX += diff > 0 ? 7 : -7;
+            } else {
+                paddleX = target;
+            }
+            if(paddleX < 0) paddleX = 0;
+            if(paddleX > canvas.width - paddleWidth) paddleX = canvas.width - paddleWidth;
         }
-        // 화면 경계 체크
-        if(paddleX < 0) paddleX = 0;
-        if(paddleX > canvas.width - paddleWidth) paddleX = canvas.width - paddleWidth;
-    } else {
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+    }
+    // 수동 패들 이동
+    if(!autoMode) {
         if(rightPressed && paddleX < canvas.width - paddleWidth) {
             paddleX += 7;
         } else if(leftPressed && paddleX > 0) {
             paddleX -= 7;
         }
     }
-
-    x += dx;
-    y += dy;
     requestAnimationFrame(draw);
 }
 
