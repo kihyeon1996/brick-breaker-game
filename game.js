@@ -171,7 +171,15 @@ function draw() {
         dy = -dy;
     } else if(y + dy > canvas.height - ballRadius) {
         if(x > paddleX && x < paddleX + paddleWidth) {
-            dy = -dy;
+            // 패들 중앙 기준 위치
+            let hitPoint = (x - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
+            let speed = Math.sqrt(dx*dx + dy*dy);
+            let angle = hitPoint * Math.PI / 3; // 최대 60도
+            dx = speed * Math.sin(angle);
+            dy = -Math.abs(speed * Math.cos(angle));
+            // 패들이 움직이고 있으면 추가 가속도
+            if(rightPressed) dx += 1;
+            if(leftPressed) dx -= 1;
         } else {
             lives--;
             if(!lives) {
