@@ -14,6 +14,7 @@ let paddleX = (canvas.width - paddleWidth) / 2;
 
 let rightPressed = false;
 let leftPressed = false;
+let autoMode = false;
 
 const brickRowCount = 5;
 const brickColumnCount = 7;
@@ -49,6 +50,8 @@ function keyDownHandler(e) {
         rightPressed = true;
     } else if(e.key === 'Left' || e.key === 'ArrowLeft') {
         leftPressed = true;
+    } else if(e.key === 'a' || e.key === 'A') {
+        autoMode = !autoMode;
     }
 }
 
@@ -61,6 +64,7 @@ function keyUpHandler(e) {
 }
 
 function mouseMoveHandler(e) {
+    if(autoMode) return; // 오토모드일 때는 마우스 무시
     const relativeX = e.clientX - canvas.getBoundingClientRect().left;
     if(relativeX > 0 && relativeX < canvas.width) {
         paddleX = relativeX - paddleWidth / 2;
@@ -97,7 +101,7 @@ function drawBall() {
 function drawPaddle() {
     ctx.beginPath();
     ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
-    ctx.fillStyle = '#2196f3';
+    ctx.fillStyle = autoMode ? '#f44336' : '#2196f3';
     ctx.fill();
     ctx.closePath();
 }
@@ -124,6 +128,10 @@ function drawScore() {
     ctx.font = '16px Arial';
     ctx.fillStyle = '#fff';
     ctx.fillText('점수: ' + score, 8, 20);
+    if(autoMode) {
+        ctx.fillStyle = '#f44336';
+        ctx.fillText('AUTO', 100, 20);
+    }
 }
 
 function drawLives() {
@@ -140,6 +148,9 @@ function drawStartScreen() {
     ctx.fillText('벽돌깨기 게임', canvas.width/2, canvas.height/2 - 30);
     ctx.font = '20px Arial';
     ctx.fillText('클릭해서 시작', canvas.width/2, canvas.height/2 + 20);
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#f44336';
+    ctx.fillText('A키로 AUTO 모드 토글', canvas.width/2, canvas.height/2 + 60);
     ctx.textAlign = 'start';
 }
 
@@ -196,10 +207,24 @@ function draw() {
     }
 
     // 패들 이동
-    if(rightPressed && paddleX < canvas.width - paddleWidth) {
-        paddleX += 7;
-    } else if(leftPressed && paddleX > 0) {
-        paddleX -= 7;
+    if(autoMode) {
+        // 패들이 공을 따라가도록 자동 이동
+        let target = x - paddleWidth/2;
+        let diff = target - paddleX;
+        if(Math.abs(diff) > 4) {
+            paddleX += diff > 0 ? 7 : -7;
+        } else {
+            paddleX = target;
+        }
+        // 화면 경계 체크
+        if(paddleX < 0) paddleX = 0;
+        if(paddleX > canvas.width - paddleWidth) paddleX = canvas.width - paddleWidth;
+    } else {
+        if(rightPressed && paddleX < canvas.width - paddleWidth) {
+            paddleX += 7;
+        } else if(leftPressed && paddleX > 0) {
+            paddleX -= 7;
+        }
     }
 
     x += dx;
