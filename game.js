@@ -26,6 +26,8 @@ const brickOffsetLeft = 25;
 let score = 0;
 let lives = 3;
 
+let gameStarted = false;
+
 // 벽돌 배열 생성
 const bricks = [];
 for(let c = 0; c < brickColumnCount; c++) {
@@ -39,8 +41,8 @@ for(let c = 0; c < brickColumnCount; c++) {
 
 document.addEventListener('keydown', keyDownHandler, false);
 document.addEventListener('keyup', keyUpHandler, false);
-
 document.addEventListener('mousemove', mouseMoveHandler, false);
+canvas.addEventListener('click', startGame, false);
 
 function keyDownHandler(e) {
     if(e.key === 'Right' || e.key === 'ArrowRight') {
@@ -130,7 +132,29 @@ function drawLives() {
     ctx.fillText('목숨: ' + lives, canvas.width - 70, 20);
 }
 
+function drawStartScreen() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '28px Arial';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText('벽돌깨기 게임', canvas.width/2, canvas.height/2 - 30);
+    ctx.font = '20px Arial';
+    ctx.fillText('클릭해서 시작', canvas.width/2, canvas.height/2 + 20);
+    ctx.textAlign = 'start';
+}
+
+function startGame() {
+    if (!gameStarted) {
+        gameStarted = true;
+        draw();
+    }
+}
+
 function draw() {
+    if (!gameStarted) {
+        drawStartScreen();
+        return;
+    }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBricks();
     drawBall();
@@ -175,4 +199,4 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-draw();
+drawStartScreen();
